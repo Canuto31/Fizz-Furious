@@ -306,6 +306,7 @@ public class PlayerController : MonoBehaviour, IDamageable
         cameraShake?.Shake(heavyShakeIntensity, shakeDuration * 1.2f);
 
         DoHeavyHit();
+            
     }
 
     private void CancelHeavyCharge()
