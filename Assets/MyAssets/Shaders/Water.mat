@@ -103,7 +103,7 @@ Material:
     - _ClearCoatSmoothness: 0
     - _Cull: 2
     - _Cutoff: 0.5
-    - _Depth: 1.31
+    - _Depth: 147.02
     - _DepthFallOff: 1.57
     - _DetailAlbedoMapScale: 1
     - _DetailNormalMapScale: 1
@@ -112,10 +112,10 @@ Material:
     - _EnvironmentReflections: 1
     - _FoamAmount: 0.8
     - _FoamCutout: 0.06
-    - _FoamDepth: 4.32
+    - _FoamDepth: 15.86
     - _FoamFallOff: 1.72
-    - _FoamShoreWidth: 1.03
-    - _FoamTIling: 0.7
+    - _FoamShoreWidth: 145.69
+    - _FoamTIling: 1.41
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0

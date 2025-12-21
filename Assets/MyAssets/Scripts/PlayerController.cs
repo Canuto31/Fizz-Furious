@@ -3,6 +3,8 @@ using UnityEditor.Build.Content;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using System;
+using TMPro;
+using UnityEngine.UI;
 
 public class PlayerController : MonoBehaviour, IDamageable
 {
@@ -112,8 +114,11 @@ public class PlayerController : MonoBehaviour, IDamageable
 
     #region === STATS ===
 
-    [SerializeField] private float maxHealth = 100f;
+    [SerializeField] private float maxHealth = 1000f;
     [SerializeField] private float currentHealth;
+    
+    public Slider healthBar;
+    [SerializeField] private TMP_Text healthText;
 
     #endregion
 
@@ -130,18 +135,73 @@ public class PlayerController : MonoBehaviour, IDamageable
         currentHealth = maxHealth;
 
     }
+    
+    [SerializeField] private float moveSpeed = 6f;
+    [SerializeField] private float acceleration = 10f;
+
+    private Vector3 _currentVelocity;
+    private Vector3 _moveDirection;
+
+    [SerializeField] private bool faceRight = true;
+    private Transform _movementReference;
+    
+    [SerializeField] private Transform cameraFollow;
+    [SerializeField] private Vector3 cameraOffset;
+
+    private Vector3 _lastPosition;
+
+    private void Start()
+    {
+        _movementReference = new GameObject("MovementReference").transform;
+        _movementReference.position = transform.position;
+        _movementReference.rotation = transform.rotation;
+
+        if (!faceRight)
+            _movementReference.rotation *= Quaternion.Euler(0f, 180f, 0f);
+        
+        _lastPosition = transform.position;
+    }
 
     private void Update()
     {
         HandleHeavyCharge();
         HandleStamina();
         CheckOutOfBounds();
+
+        Vector2 input = _inputVector;
+
+// Movimiento en mundo (cámara lateral)
+        _moveDirection = new Vector3(
+            -input.y,   // A / D → izquierda / derecha
+            0f,
+            input.x    // W / S → arriba / abajo
+        );
+
+        _moveDirection = Vector3.ClampMagnitude(_moveDirection, 1f);
+
+        RotateMesh();
+        
+        healthText.text = currentHealth + " / " + maxHealth;
+        healthBar.value = (float)currentHealth / (float)maxHealth;
     }
 
     private void FixedUpdate()
     {
         MovePlayer();
         CheckGround();
+    }
+    
+    private void LateUpdate()
+    {
+        Vector3 delta = transform.position - _lastPosition;
+
+        // Solo mover el follow si el player REALMENTE se movió
+        if (delta.sqrMagnitude > 0.0001f)
+        {
+            cameraFollow.position = transform.position + cameraOffset;
+        }
+
+        _lastPosition = transform.position;
     }
 
     #endregion
@@ -165,6 +225,7 @@ public class PlayerController : MonoBehaviour, IDamageable
 
     public void OnJump(InputAction.CallbackContext context)
     {
+ 
         if (context.started && _isGrounded)
             { 
             rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
@@ -174,6 +235,7 @@ public class PlayerController : MonoBehaviour, IDamageable
 
     public void OnBasicHit(InputAction.CallbackContext context)
     {
+
         if (context.started)
             DoBasicHit();
     }
@@ -202,11 +264,25 @@ public class PlayerController : MonoBehaviour, IDamageable
     #endregion
 
     #region === MOVEMENT LOGIC ===
+    
+    [SerializeField] private Transform playerMesh;
+    [SerializeField] private float rotationSpeed = 10f;
+    
+    private void RotateMesh()
+    {
+        if (_moveDirection.sqrMagnitude < 0.01f) return;
+
+        Quaternion targetRotation = Quaternion.LookRotation(_moveDirection);
+
+        playerMesh.rotation = Quaternion.Slerp(
+            playerMesh.rotation,
+            targetRotation,
+            rotationSpeed * Time.deltaTime
+        );
+    }
 
     private void MovePlayer()
     {
-        Vector3 direction = (transform.forward * _inputVector.y) +
-                            (transform.right * _inputVector.x);
 
         float currentSpeed = _isRunning && _currentStamina > 0f ? runSpeed : walkSpeed;
 
@@ -221,8 +297,16 @@ public class PlayerController : MonoBehaviour, IDamageable
             animator.SetFloat("Speed", 0f);
             animator.SetBool("IsRunning", false);
         }
+        
+        Vector3 targetVelocity = _moveDirection * moveSpeed;
 
-        rb.MovePosition(rb.position + direction * (currentSpeed * Time.fixedDeltaTime));
+        _currentVelocity = Vector3.Lerp(
+            _currentVelocity,
+            targetVelocity,
+            acceleration * Time.fixedDeltaTime
+        );
+
+        rb.MovePosition(rb.position + _currentVelocity * Time.fixedDeltaTime);
     }
 
     private void CheckGround()
@@ -520,4 +604,19 @@ public class PlayerController : MonoBehaviour, IDamageable
         audioSource.Stop();
     }
     #endregion
+
+    private bool isControlEnabled = true;
+
+    public void DisableControl()
+    {
+        isControlEnabled = false;
+        _inputVector = Vector2.zero;
+        animator.SetFloat("Speed", 0f);
+        animator.SetBool("IsRunning", false);
+    }
+
+    public void EnableControl()
+    {
+        isControlEnabled = true;
+    }
 }
